@@ -82,7 +82,7 @@
         <!--<p id="fullScreenButton" onclick="Module.requestFullScreen(true, false)">Click for full-screen</p>-->
       </div>
       <div class="slidecontainer">
-        <input type="range" min="-100" max="100" value="30" class="slider" id="myRange">
+        <input type="range" min="0" max="1000" value="300" class="slider" id="myRange">
       </div>
 
     <script type='text/javascript'>
@@ -113,7 +113,13 @@
                     Module.mouse_down( event.buttons == 1 ? true : false );
                 });
 
-                canvas.addEventListener('mousedown', function(event) {
+                canvas.addEventListener( 'click', function( event ) {
+                    var pos = getMousePos(canvas, event);
+                    Module.mouse_move( pos.x, pos.y );
+                    Module.mouse_click( true );
+                });
+
+                canvas.addEventListener( 'mousedown', function( event ) {
                     var pos = getMousePos(canvas, event);
                     Module.mouse_move( pos.x, pos.y );
                     Module.mouse_down( true );
@@ -136,14 +142,31 @@
                     Module.mouse_down( false );
                 });
 
+                canvas.addEventListener('touchstart', function(event) {
+                    var pos = getMousePos(canvas, event);
+                    Module.mouse_move( pos.x, pos.y );
+                    Module.mouse_down( true );
+                });
+
+                canvas.addEventListener('touchend', function(event) {
+                    var pos = getMousePos(canvas, event);
+                    Module.mouse_move( pos.x, pos.y );
+                    Module.mouse_down( false );
+                    Module.mouse_click( true );
+                });
+
+                canvas.addEventListener('touchmove', function(event) {
+                    var pos = getMousePos(canvas, event);
+                    Module.mouse_move( pos.x, pos.y );
+                    Module.mouse_down( true );
+                });
+
+                canvas.addEventListener('touchcancel', function(event) {
+                    Module.mouse_down( false );
+                });
+
                 return canvas;
             })(),
-            getMousePos: function(event) {
-                var rect = Module.canvas.getBoundingClientRect();
-                var x = event.clientX - rect.left;
-                var y = event.clientY - rect.top;
-                return { x: x, y: y };
-            }
         };
 
         function getMousePos(canvas, event) {
