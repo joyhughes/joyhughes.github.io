@@ -128,7 +128,7 @@ var REMOTE_PACKAGE_SIZE = metadata['remote_package_size'];
       function assert(check, msg) {
         if (!check) throw msg + new Error().stack;
       }
-Module['FS_createPath']("/", "nebula_files", true, true);
+Module['FS_createPath']("/", "diffuser_files", true, true);
 
       /** @constructor */
       function DataRequest(start, end, audio) {
@@ -196,7 +196,7 @@ Module['FS_createPath']("/", "nebula_files", true, true);
     }
 
     }
-    loadPackage({"files": [{"filename": "/nebula_files/crab_nebula.jpg", "start": 0, "end": 65309}, {"filename": "/nebula_files/nebula_brush.json", "start": 65309, "end": 66893}], "remote_package_size": 66893});
+    loadPackage({"files": [{"filename": "/diffuser_files/.DS_Store", "start": 0, "end": 6148}, {"filename": "/diffuser_files/circle.jpg", "start": 6148, "end": 33212}, {"filename": "/diffuser_files/diffuser.json", "start": 33212, "end": 33881}, {"filename": "/diffuser_files/diffuser_brush.json", "start": 33881, "end": 35377}, {"filename": "/diffuser_files/diffuser_dot.json", "start": 35377, "end": 36462}, {"filename": "/diffuser_files/hk_square_512.jpg", "start": 36462, "end": 603490}], "remote_package_size": 603490});
 
   })();
 
