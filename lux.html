@@ -146,13 +146,13 @@
                     var pos = getMousePos(canvas, event);
                     Module.mouse_move( pos.x, pos.y );
                     Module.mouse_down( true );
+                    Module.mouse_click( true );
                 });
 
                 canvas.addEventListener('touchend', function(event) {
                     var pos = getMousePos(canvas, event);
                     Module.mouse_move( pos.x, pos.y );
                     Module.mouse_down( false );
-                    Module.mouse_click( true );
                 });
 
                 canvas.addEventListener('touchmove', function(event) {
