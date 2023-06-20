@@ -113,16 +113,17 @@
                     Module.mouse_down( event.buttons == 1 ? true : false );
                 });
 
-                canvas.addEventListener( 'click', function( event ) {
-                    var pos = getMousePos(canvas, event);
-                    Module.mouse_move( pos.x, pos.y );
-                    Module.mouse_click( true );
-                });
+                //canvas.addEventListener( 'click', function( event ) {
+                //    var pos = getMousePos(canvas, event);
+                //    Module.mouse_move( pos.x, pos.y );
+                //    Module.mouse_click( true );
+                //});
 
                 canvas.addEventListener( 'mousedown', function( event ) {
                     var pos = getMousePos(canvas, event);
                     Module.mouse_move( pos.x, pos.y );
                     Module.mouse_down( true );
+                    Module.mouse_click( true );
                 });
 
                 canvas.addEventListener('mouseup', function(event) {
@@ -143,20 +144,20 @@
                 });
 
                 canvas.addEventListener('touchstart', function(event) {
-                    var pos = getMousePos(canvas, event);
+                    var pos = getTouchPos(canvas, event);
                     Module.mouse_move( pos.x, pos.y );
                     Module.mouse_down( true );
                     Module.mouse_click( true );
                 });
 
                 canvas.addEventListener('touchend', function(event) {
-                    var pos = getMousePos(canvas, event);
+                    var pos = getTouchPos(canvas, event);
                     Module.mouse_move( pos.x, pos.y );
                     Module.mouse_down( false );
                 });
 
                 canvas.addEventListener('touchmove', function(event) {
-                    var pos = getMousePos(canvas, event);
+                    var pos = getTouchPos(canvas, event);
                     Module.mouse_move( pos.x, pos.y );
                     Module.mouse_down( true );
                 });
@@ -173,6 +174,13 @@
             var rect = canvas.getBoundingClientRect();
             var x = event.clientX - rect.left;
             var y = event.clientY - rect.top;
+            return { x: x, y: y };
+        }
+
+        function getTouchPos(canvas, event) {
+            var rect = canvas.getBoundingClientRect();
+            var x = event.touches[ 0 ].clientX - rect.left;
+            var y = event.touches[ 0 ].clientY - rect.top;
             return { x: x, y: y };
         }
 
