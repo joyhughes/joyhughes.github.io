@@ -17,9 +17,9 @@
         const circleSlider = document.getElementById('circleSlider');
         const pointsReadout = document.getElementById('pointsReadout');
     
-        // Function to draw TSP path
-        function drawTSPPath(points) {
+        function drawTspPath(points, color) {
             tspCtx.clearRect(0, 0, tspCanvas.width, tspCanvas.height);
+            tspCtx.strokeStyle = color;
             tspCtx.beginPath();
             tspCtx.moveTo(points[0].x, points[0].y);
             for (let i = 1; i < points.length; i++) {
@@ -29,7 +29,6 @@
             tspCtx.stroke();
         }
     
-        // Function to draw circle
         function drawCircle(diameter) {
             circleCtx.clearRect(0, 0, circleCanvas.width, circleCanvas.height);
             circleCtx.beginPath();
@@ -42,14 +41,19 @@
             // Event listener for running TSP
             runButton.addEventListener('click', () => {
                 tspCanvas.style.backgroundColor = 'black'; // Set background to black while WASM is running
+                const callback = (interimJson) => {
+                    // Send interim points to the main thread
+                    const result = JSON.parse(interimJson);
+                    drawTspPath(result.points, 'red');
+                };
     
                 setTimeout(() => {
                     const numPoints = parseInt(pointsSlider.value, 10);
-                    const result = Module.runTSP(numPoints);
-                    const points = JSON.parse(result);
+                    const resultJson = Module.runTSP(numPoints, callback);
+                    const result = JSON.parse(resultJson);
     
                     tspCanvas.style.backgroundColor = 'white'; // Return background to white once WASM finishes
-                    drawTSPPath(points);
+                    drawTspPath(result.points, 'black');
                 }, 0); // Using setTimeout to let the UI update before running the TSP
             });
         });
@@ -82,13 +86,14 @@
 </head>
 <body>
     <h1> Single thread WASM test</h1>
+    <h2>Traveling Salesman Problem</h2>
     <div id="container">
         <canvas id="tspCanvas" width="200" height="200"></canvas>
         <canvas id="circleCanvas" width="200" height="200"></canvas>
     </div>
     <div>
-        <label for="pointsSlider">Number of Points (2-12): </label>
-        <input type="range" id="pointsSlider" min="2" max="12" value="12">
+        <label for="pointsSlider">Number of Points (2-14): </label>
+        <input type="range" id="pointsSlider" min="2" max="14" value="13">
         <span id="pointsReadout">5</span>
         <button id="runButton">Run TSP</button>
     </div>
@@ -96,6 +101,6 @@
         <label for="circleSlider">Circle Diameter (0-200): </label>
         <input type="range" id="circleSlider" min="0" max="200" value="100">
     </div>
-    <p>A demo of thread blocking in a single threaded web app. Controls on the left start solution of traveling salesman problem (TSP) by brute force in Emscripten generated WebAssembly. Setting number of points to a high value will make controls unresponsive while TSP calculation is running.</p>
+    <p>A demo of thread blocking in a single threaded web app. Controls on the left start solution of traveling salesman problem (TSP) by brute force in Emscripten-generated WebAssembly. Setting number of points to a high value will make controls unresponsive while TSP calculation is running.</p>
 </body>
 </html>
