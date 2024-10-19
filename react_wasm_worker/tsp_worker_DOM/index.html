@@ -35,7 +35,7 @@
         }
 
         // Create and initialize the Web Worker
-        const worker = new Worker('tspWorker.js?version=' + new Date().getTime(), { type: 'module' });
+        const worker = new Worker('tspworker.js?version=' + new Date().getTime(), { type: 'module' });
 
         // Event listener for running TSP
         runButton.addEventListener('click', () => {
