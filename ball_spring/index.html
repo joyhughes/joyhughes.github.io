@@ -16,12 +16,21 @@
             padding: 10px;
             border-radius: 8px;
         }
+        #ui label {
+            display: block;
+            margin-bottom: 5px;
+        }
     </style>
 </head>
 <body>
     <div id="ui">
         <button id="restartButton">Restart</button>
-        <button id="growButton">Grow Graph</button>
+        <button id="growButton">Grow Graph</button><br>
+        <label>Repulsion Strength: <input type="range" id="repulsionStrength" min="1" max="100" step="1" value="50"><span id="repulsionStrengthValue">50</span></label><br>
+        
+        <label>Spring Strength: <input type="range" id="springStrength" min="0.001" max="0.1" step="0.001" value="0.01"><span id="springStrengthValue">0.01</span></label><br>
+        <label>Damping Factor: <input type="range" id="dampingFactor" min="0.02" max="2" step="0.02" value="0.5"><span id="dampingFactorValue">0.5</span></label><br>
+        <label>Timestep: <input type="range" id="timeStep" min="0.01" max="0.5" step="0.01" value="0.1"><span id="timeStepValue">0.1</span></label>
     </div>
     <script type="module">
         import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js';
@@ -59,6 +68,12 @@
             // UI Controls
             document.getElementById('restartButton').addEventListener('click', restartSimulation);
             document.getElementById('growButton').addEventListener('click', growGraph);
+            //document.getElementById('swapButton').addEventListener('click', swapSprings);
+            document.querySelectorAll('input[type=range]').forEach(input => {
+                input.addEventListener('input', (e) => {
+                    document.getElementById(e.target.id + 'Value').innerText = e.target.value;
+                });
+            });
         }
 
         function restartSimulation() {
@@ -109,32 +124,123 @@
             mesh.position.set(x, y, z);
             scene.add(mesh);
 
-            const ball = { mesh, isLeaf: (color === 0x00ff00) };
+            const ball = { 
+                mesh, 
+                velocity: new THREE.Vector3(0, 0, 0),
+                isLeaf: (color === 0x00ff00) 
+            };
             balls.push(ball);
             return ball;
         }
 
         function createSpring(ballA, ballB) {
             const material = new THREE.MeshPhongMaterial({ color: 0x808080, shininess: 30 });
-            const geometry = new THREE.CylinderGeometry(0.5, 0.5, ballA.mesh.position.distanceTo(ballB.mesh.position), 8);
+            const geometry = new THREE.CylinderGeometry(0.5, 0.5, 1, 8); // Length will be updated dynamically
             const springMesh = new THREE.Mesh(geometry, material);
+            scene.add(springMesh);
 
-            // Position spring between two balls
-            const midPoint = new THREE.Vector3().addVectors(ballA.mesh.position, ballB.mesh.position).multiplyScalar(0.5);
-            springMesh.position.copy(midPoint);
+            springs.push({ ballA, ballB, mesh: springMesh });
+        }
+
+        function updateSpring(spring) {
+            const { ballA, ballB, mesh } = spring;
+            const positionA = ballA.mesh.position;
+            const positionB = ballB.mesh.position;
+
+            // Update position to midpoint
+            const midPoint = new THREE.Vector3().addVectors(positionA, positionB).multiplyScalar(0.5);
+            mesh.position.copy(midPoint);
+
+            // Update length
+            const currentLength = positionA.distanceTo(positionB);
+            mesh.scale.set(1, currentLength, 1);
 
             // Rotate spring to align with balls
-            const direction = new THREE.Vector3().subVectors(ballB.mesh.position, ballA.mesh.position);
+            const direction = new THREE.Vector3().subVectors(positionB, positionA);
             const axis = new THREE.Vector3(0, 1, 0).cross(direction).normalize();
             const angle = Math.acos(new THREE.Vector3(0, 1, 0).dot(direction.normalize()));
-            springMesh.setRotationFromAxisAngle(axis, angle);
+            mesh.setRotationFromAxisAngle(axis, angle);
+        }
 
-            scene.add(springMesh);
-            springs.push({ mesh: springMesh, ballA, ballB });
+        function swapSprings() {
+            if (springs.length < 2) return;
+
+            // Select two random springs
+            const [spring1, spring2] = getRandomElements(springs, 2);
+
+            // Swap endpoints
+            const temp = spring1.ballB;
+            spring1.ballB = spring2.ballB;
+            spring2.ballB = temp;
+
+            // Update spring meshes
+            updateSpring(spring1);
+            updateSpring(spring2);
+        }
+
+        function getRandomElements(array, count) {
+            const shuffled = array.slice(0);
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+            }
+            return shuffled.slice(0, count);
         }
 
         function animate() {
             requestAnimationFrame(animate);
+
+            const repulsionStrength = parseFloat(document.getElementById('repulsionStrength').value);
+            const minDistance = 1;
+            const springStrength = parseFloat(document.getElementById('springStrength').value);
+            const dampingFactor = parseFloat(document.getElementById('dampingFactor').value);
+            const timeStep = parseFloat(document.getElementById('timeStep').value);
+
+            // Update forces and positions
+            balls.forEach(ball => {
+                const force = new THREE.Vector3();
+
+                // Repulsion force from all other balls
+                balls.forEach(otherBall => {
+                    if (ball !== otherBall) {
+                        const direction = new THREE.Vector3().subVectors(ball.mesh.position, otherBall.mesh.position);
+                        let distance = direction.length();
+                        if (distance < minDistance) distance = minDistance;
+                        direction.normalize();
+                        force.add(direction.multiplyScalar(repulsionStrength / (distance * distance)));
+                    }
+                });
+
+                // Spring forces
+                springs.forEach(spring => {
+                    if (spring.ballA === ball || spring.ballB === ball) {
+                        const otherBall = (spring.ballA === ball) ? spring.ballB : spring.ballA;
+                        const direction = new THREE.Vector3().subVectors(otherBall.mesh.position, ball.mesh.position);
+                        const currentLength = direction.length();
+                        direction.normalize();
+                        force.add(direction.multiplyScalar(springStrength * (currentLength * currentLength)));
+                    }
+                });
+
+                // Damping force
+                force.add(ball.velocity.clone().multiplyScalar(-dampingFactor));
+
+                // Update velocity and position
+                ball.velocity.add(force.multiplyScalar(timeStep));
+                ball.mesh.position.add(ball.velocity.clone().multiplyScalar(timeStep));
+            });
+
+            // Translate all balls to keep the center of gravity at the origin
+            let centerOfGravity = new THREE.Vector3();
+            balls.forEach(ball => centerOfGravity.add(ball.mesh.position));
+            centerOfGravity.divideScalar(balls.length);
+
+            balls.forEach(ball => {
+                ball.mesh.position.sub(centerOfGravity);
+            });
+
+            // Update springs
+            springs.forEach(updateSpring);
 
             // Rotate the scene around the Y axis
             scene.rotation.y += 0.005;
