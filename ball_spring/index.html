@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ball and Spring Model</title>
+    <style>
+        body { margin: 0; }
+        canvas { display: block; }
+        #ui {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div id="ui">
+        <button id="restartButton">Restart</button>
+        <button id="growButton">Grow Graph</button>
+    </div>
+    <script type="module">
+        import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js';
+
+        let scene, camera, renderer;
+        let balls = [], springs = [];
+
+        init();
+        animate();
+
+        function init() {
+            // Scene setup
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 0, 100);
+
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+            scene.add(ambientLight);
+
+            const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight1.position.set(10, 10, 10);
+            scene.add(directionalLight1);
+
+            const directionalLight2 = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight2.position.set(-10, -10, -10);
+            scene.add(directionalLight2);
+
+            restartSimulation();
+
+            // UI Controls
+            document.getElementById('restartButton').addEventListener('click', restartSimulation);
+            document.getElementById('growButton').addEventListener('click', growGraph);
+        }
+
+        function restartSimulation() {
+            // Clear existing objects
+            balls.forEach(ball => scene.remove(ball.mesh));
+            springs.forEach(spring => scene.remove(spring.mesh));
+            balls = [];
+            springs = [];
+
+            // Create initial graph
+            const startingDistance = 20;
+            const internalNode = createBall(0, 0, 0, 0xff0000);
+            for (let i = 0; i < 3; i++) {
+                const angle = (i * 2 * Math.PI) / 3;
+                const x = startingDistance * Math.cos(angle);
+                const y = startingDistance * Math.sin(angle);
+                const leafNode = createBall(x, y, 0, 0x00ff00);
+                createSpring(internalNode, leafNode);
+            }
+        }
+
+        function growGraph() {
+            // Find a leaf node to replace
+            const leafNodes = balls.filter(ball => ball.isLeaf);
+            if (leafNodes.length === 0) return;
+
+            const leafNode = leafNodes[Math.floor(Math.random() * leafNodes.length)];
+            leafNode.isLeaf = false;
+            leafNode.mesh.material.color.set(0xff0000);
+
+            const startingDistance = 20;
+            for (let i = 0; i < 2; i++) {
+                const theta = Math.random() * 2 * Math.PI;
+                const phi = Math.acos(2 * Math.random() - 1);
+                const x = leafNode.mesh.position.x + startingDistance * Math.sin(phi) * Math.cos(theta);
+                const y = leafNode.mesh.position.y + startingDistance * Math.sin(phi) * Math.sin(theta);
+                const z = leafNode.mesh.position.z + startingDistance * Math.cos(phi);
+                const newLeafNode = createBall(x, y, z, 0x00ff00);
+                createSpring(leafNode, newLeafNode);
+            }
+        }
+
+        function createBall(x, y, z, color) {
+            const radius = 2;
+            const geometry = new THREE.SphereGeometry(radius, 32, 32);
+            const material = new THREE.MeshPhongMaterial({ color: color, shininess: 50 });
+            const mesh = new THREE.Mesh(geometry, material);
+            mesh.position.set(x, y, z);
+            scene.add(mesh);
+
+            const ball = { mesh, isLeaf: (color === 0x00ff00) };
+            balls.push(ball);
+            return ball;
+        }
+
+        function createSpring(ballA, ballB) {
+            const material = new THREE.MeshPhongMaterial({ color: 0x808080, shininess: 30 });
+            const geometry = new THREE.CylinderGeometry(0.5, 0.5, ballA.mesh.position.distanceTo(ballB.mesh.position), 8);
+            const springMesh = new THREE.Mesh(geometry, material);
+
+            // Position spring between two balls
+            const midPoint = new THREE.Vector3().addVectors(ballA.mesh.position, ballB.mesh.position).multiplyScalar(0.5);
+            springMesh.position.copy(midPoint);
+
+            // Rotate spring to align with balls
+            const direction = new THREE.Vector3().subVectors(ballB.mesh.position, ballA.mesh.position);
+            const axis = new THREE.Vector3(0, 1, 0).cross(direction).normalize();
+            const angle = Math.acos(new THREE.Vector3(0, 1, 0).dot(direction.normalize()));
+            springMesh.setRotationFromAxisAngle(axis, angle);
+
+            scene.add(springMesh);
+            springs.push({ mesh: springMesh, ballA, ballB });
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Rotate the scene around the Y axis
+            scene.rotation.y += 0.005;
+
+            // Render scene
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+</html>
