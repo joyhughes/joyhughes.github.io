@@ -1,0 +1,77 @@
+name: Deploy Jen to Github Page
+
+on:
+  push:
+    branches: ["main"]
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+    inputs:
+      deployment_name:
+        description: 'Deployment domain name (e.g. "root" from root domain)'
+        required: true
+        default: 'root'
+        type: string
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Jen repository
+        uses: actions/checkout@v4
+        with:
+          repository: joyhughes/Jen
+          path: Jen
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'Jen/Lux/lux_react/package-lock.json'
+
+      - name: Install dependencies
+        run: |
+          cd Jen/Lux/lux_react
+          npm ci
+
+      - name: Set deployment domain in build
+        run: |
+          echo "VITE_DEPLOYMENT_DOMAIN=${{ github.event.inputs.deployment_name || 'root' }}" > .env
+          echo "Using deployment domain: ${{ github.event.inputs.deployment_name || 'root' }}"
+      - name: Build Jen application
+        run: |
+          cd Jen/Lux/lux_react
+          npm run build
+      - name: Config Git
+        run: |
+          git config --global user.name github-actions
+          git config --global user.email github-action@github.com
+      
+      - name: Clone gh-pages branch
+        run: |
+          git clone --single-branch --branch gh-pages https://github.com/joyhughes/joyhughes.github.io.git gh-pages || git clone https://github.com/joyhughes/joyhughes.github.io.git gh-pages
+          cd gh-pages
+          git checkout gh-pages || git checkout -b gh-pages
+          # Clear the directory (except .git folder) to prepare for new build
+          find . -mindepth 1 -maxdepth 1 -not -name '.git' -exec rm -rf {} \;
+
+      - name: Copy build files
+        run: |
+          cp -r Jen/Lux/lux_react/dist/* gh-pages/
+          # Optional: Create a log file with build date
+          echo "Build deployed on $(date) with domain: ${{ github.event.inputs.deployment_name || 'root' }}" > gh-pages/build-log.txt
+      - name: Commit and push to gh-pages
+        run: |
+            cd gh-pages
+            git add -A
+            git commit -m "Deploy Jen application with domain: ${{ github.event.inputs.deployment_name || 'root' }} ($(date +%Y-%m-%d))"
+            git push -f origin gh-pages
