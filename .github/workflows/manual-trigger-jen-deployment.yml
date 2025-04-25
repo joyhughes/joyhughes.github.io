@@ -71,7 +71,8 @@ jobs:
           echo "Build deployed on $(date) with domain: ${{ github.event.inputs.deployment_name || 'root' }}" > gh-pages/build-log.txt
       - name: Commit and push to gh-pages
         run: |
-            cd gh-pages
-            git add -A
-            git commit -m "Deploy Jen application with domain: ${{ github.event.inputs.deployment_name || 'root' }} ($(date +%Y-%m-%d))"
-            git push -f origin gh-pages
+          cd gh-pages
+          git add -A
+          git commit -m "Deploy Jen application with domain: ${{ github.event.inputs.deployment_name || 'root' }} ($(date +%Y-%m-%d))"
+          git remote set-url origin https://x-access-token:${{ github.token }}@github.com/joyhughes/joyhughes.github.io.git
+          git push -f origin gh-pages
